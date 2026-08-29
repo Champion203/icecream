@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🍦 Deep Fried Ice Cream Shop Management System
 
-## Getting Started
+ระบบจัดการต้นทุน ยอดขาย สินค้าคงเหลือ และรายงานประจำวันสำหรับร้านขายไอติมทอด
 
-First, run the development server:
+## ✨ Features
 
+- 📊 **Dashboard** - แสดงสรุปรายได้ ต้นทุน กำไร และสถิติประจำวัน
+- 🛒 **บันทึกการขาย** - บันทึกการขายสิ้นค้าแบบเรียลไทม์
+- 💰 **จัดการต้นทุน** - บันทึกการซื้อไอติมใหม่และต้นทุน
+- 📦 **จัดการสินค้า** - แสดงคงเหลือสินค้าแต่ละรสชาติ
+- ⚠️ **ระบบเตือน** - แจ้งเตือนเมื่อไอติมเหลือน้อยหรือหมด
+- 📈 **รายงานประจำวัน** - สรุปรายได้-ต้นทุน-กำไรแต่ละวัน
+- 📱 **Responsive Design** - ใช้ได้ทั้ง Desktop และ Mobile
+
+## 🚀 Quick Start
+
+### 1. Clone Repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd icecream
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Setup Supabase Database
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. สร้าง account ที่ [Supabase](https://supabase.com)
+2. สร้าง project ใหม่
+3. ไปที่ SQL Editor และ run SQL script:
+   - เปิดไฟล์ `docs/SUPABASE_SETUP.sql`
+   - Copy ทั้งหมด แล้ว paste ใน Supabase SQL Editor
+   - Run (⌘+Enter หรือ Ctrl+Enter)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Setup Environment Variables
 
-## Learn More
+1. เปิด `.env.local` และเติม Supabase credentials:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
 
-To learn more about Next.js, take a look at the following resources:
+ได้ keys เหล่านี้จาก Supabase > Project Settings > API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 4. Install Dependencies
+```bash
+npm install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 5. Run Development Server
+```bash
+npm run dev
+```
 
-## Deploy on Vercel
+เปิด browser ไปที่ `http://localhost:3000`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📋 Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+icecream/
+├── app/                    # Next.js App Router
+│   ├── api/                # API routes
+│   ├── costs/              # Cost management page
+│   ├── inventory/          # Inventory page
+│   ├── reports/            # Reports page
+│   ├── sales/              # Sales recording page
+│   └── page.tsx            # Dashboard
+├── components/             # React components
+├── lib/                    # Utilities & helpers
+├── schema/                 # TypeScript types
+├── docs/                   # Documentation
+└── .env.local              # Environment variables
+```
+
+## 🛠️ Available Scripts
+
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run start    # Start production server
+npm run lint     # Run ESLint
+```
+
+## 🌐 Deployment to Vercel
+
+1. Push code ไป GitHub
+2. ไป [Vercel.com](https://vercel.com) และ login
+3. Click "Import GitHub repo"
+4. เลือก repository นี้
+5. Add Environment Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+6. Click Deploy
+
+หลังจากนั้น Vercel จะสร้าง production URL ให้คุณอัตโนมัติ
+
+## 📱 Pages
+
+- **/** - Dashboard
+- **/sales** - บันทึกการขาย
+- **/costs** - จัดการต้นทุน
+- **/inventory** - จัดการสินค้า
+- **/reports** - รายงานประจำวัน
+
+## 🔌 API Routes
+
+- `GET /api/inventory` - ดึงรายการไอติมทั้งหมด
+- `POST /api/inventory` - เพิ่มไอติมใหม่
+- `GET /api/costs` - ดึงบันทึกต้นทุน
+- `POST /api/costs` - เพิ่มต้นทุนใหม่
+- `GET /api/sales` - ดึงบันทึกการขาย
+- `POST /api/sales` - เพิ่มการขายใหม่
+- `GET /api/dashboard` - ดึงสถิติ Dashboard
+
+## 📦 Tech Stack
+
+- Next.js 16
+- React 18
+- TypeScript
+- Supabase (PostgreSQL)
+- PrimeReact
+- Tailwind CSS
+- Chart.js
+- React Hook Form + Zod
+
+## 🛡️ Security
+
+- ✅ Environment variables สำหรับ credentials
+- ✅ Supabase RLS (Row Level Security)
+- ✅ Input validation ด้วย Zod
+- ✅ Parameterized queries
+- ✅ ห้าม commit `.env.local`
+
+## 🐛 Troubleshooting
+
+**Supabase connection error**
+- ตรวจสอบ `.env.local` ว่าครบทั้ง 3 keys
+- ตรวจสอบ Supabase project status
+
+**Build errors**
+- ลบ `.next` folder แล้วรัน `npm run build` อีกครั้ง
+- ตรวจสอบ Node.js version >= 18
+
+---
+
+Made with ❤️ for Ice Cream Lovers 🍦

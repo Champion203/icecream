@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
-import { InputNumber } from 'primereact/inputnumber';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
 import type { AddInventoryForm as IAddInventoryForm } from '@/schema/types';
@@ -32,6 +31,9 @@ export function AddInventoryForm({ onSuccess }: AddInventoryFormProps) {
   } = useForm<IAddInventoryForm>({
     resolver: zodResolver(schema),
     defaultValues: {
+      name: '',
+      flavor: '',
+      unit_cost: undefined,
       max_stock: 100,
     },
   });
@@ -58,6 +60,8 @@ export function AddInventoryForm({ onSuccess }: AddInventoryFormProps) {
   return (
     <>
       <Toast ref={toast} />
+      {/* React Hook Form creates a stable submit handler; this is not a ref read. */}
+      {/* eslint-disable-next-line react-hooks/refs */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label className="block mb-2 font-medium">ชื่อไอติม</label>
@@ -66,7 +70,11 @@ export function AddInventoryForm({ onSuccess }: AddInventoryFormProps) {
             control={control}
             render={({ field }) => (
               <InputText
-                {...field}
+                name={field.name}
+                value={field.value ?? ''}
+                onChange={(event) => field.onChange(event.target.value)}
+                onBlur={field.onBlur}
+                ref={field.ref}
                 placeholder="เช่น Deep Fried Vanilla"
                 className="w-full"
               />
@@ -84,7 +92,11 @@ export function AddInventoryForm({ onSuccess }: AddInventoryFormProps) {
             control={control}
             render={({ field }) => (
               <InputText
-                {...field}
+                name={field.name}
+                value={field.value ?? ''}
+                onChange={(event) => field.onChange(event.target.value)}
+                onBlur={field.onBlur}
+                ref={field.ref}
                 placeholder="เช่น วนิลา"
                 className="w-full"
               />
@@ -102,14 +114,21 @@ export function AddInventoryForm({ onSuccess }: AddInventoryFormProps) {
               name="unit_cost"
               control={control}
               render={({ field }) => (
-                <InputNumber
-                  {...field}
-                  value={field.value || undefined}
-                  onValueChange={(e) => field.onChange(e.value)}
-                  mode="currency"
-                  currency="THB"
-                  locale="th-TH"
-                  className="w-full"
+                <input
+                  id={field.name}
+                  name={field.name}
+                  type="number"
+                  value={field.value ?? ''}
+                  onChange={(event) =>
+                    field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)
+                  }
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  min={0.01}
+                  step="0.01"
+                  inputMode="decimal"
+                  className="p-inputtext p-component w-full"
+                  placeholder="0.00"
                 />
               )}
             />
@@ -126,11 +145,20 @@ export function AddInventoryForm({ onSuccess }: AddInventoryFormProps) {
               name="max_stock"
               control={control}
               render={({ field }) => (
-                <InputNumber
-                  {...field}
-                  value={field.value || undefined}
-                  onValueChange={(e) => field.onChange(e.value)}
-                  className="w-full"
+                <input
+                  id={field.name}
+                  name={field.name}
+                  type="number"
+                  value={field.value ?? ''}
+                  onChange={(event) =>
+                    field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)
+                  }
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  className="p-inputtext p-component w-full"
                 />
               )}
             />

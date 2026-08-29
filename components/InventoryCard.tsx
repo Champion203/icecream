@@ -4,7 +4,12 @@ import { Card } from 'primereact/card';
 import { Tag } from 'primereact/tag';
 import { Button } from 'primereact/button';
 import type { Inventory } from '@/schema/types';
-import { formatCurrency, getStockStatusColor, getStockStatusLabel } from '@/lib/utils';
+import {
+  formatCurrency,
+  formatInventoryName,
+  getStockStatusColor,
+  getStockStatusLabel,
+} from '@/lib/utils';
 
 interface InventoryCardProps {
   item: Inventory;
@@ -17,17 +22,16 @@ export function InventoryCard({ item, onEdit, onDelete }: InventoryCardProps) {
   const stockLabel = getStockStatusLabel(item);
 
   return (
-    <Card className="mb-4">
-      <div className="flex justify-between items-start mb-3">
+    <Card className="inventory-item-card">
+      <div className="inventory-item-card__heading mb-3">
         <div>
-          <h3 className="text-lg font-bold">{item.name}</h3>
-          <p className="text-gray-600 text-sm">{item.flavor}</p>
+          <h3 className="text-lg font-bold">{formatInventoryName(item)}</h3>
+          <p className="text-gray-600 text-sm">รสชาติ {item.flavor}</p>
         </div>
-        <Tag
-          value={stockLabel}
-          severity={stockStatus}
-          className="text-sm"
-        />
+        <div className="inventory-item-card__stock">
+          <span>สถานะสต็อก</span>
+          <Tag value={stockLabel} severity={stockStatus} className="text-sm" />
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">

@@ -16,7 +16,10 @@ CREATE TABLE IF NOT EXISTS inventory (
 -- 2. Costs table
 CREATE TABLE IF NOT EXISTS costs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  inventory_id UUID NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
+  inventory_id UUID REFERENCES inventory(id) ON DELETE SET NULL,
+  category VARCHAR(20) NOT NULL DEFAULT 'icecream'
+    CHECK (category IN ('icecream', 'topping', 'oil', 'equipment', 'other')),
+  description VARCHAR(255),
   quantity INTEGER NOT NULL,
   unit_price DECIMAL(10, 2) NOT NULL,
   total_cost DECIMAL(10, 2) NOT NULL,

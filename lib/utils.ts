@@ -1,4 +1,13 @@
-import type { Inventory } from '@/schema/types';
+import type { CostCategory, Inventory } from '@/schema/types';
+
+export const getCostCategoryLabel = (category: CostCategory): string =>
+  ({
+    icecream: 'ไอศกรีม',
+    topping: 'ท็อปปิ้ง',
+    oil: 'น้ำมัน',
+    equipment: 'อุปกรณ์',
+    other: 'อื่น ๆ',
+  })[category];
 
 /**
  * Format number to Thai currency format
@@ -38,6 +47,30 @@ export const formatTime = (time: string): string => {
 export const getTodayDate = (): string => {
   const today = new Date();
   return today.toISOString().split('T')[0];
+};
+
+/** Get Monday-Sunday date range for the week containing the given date. */
+export const getWeekRange = (date: Date = new Date()): { start: string; end: string } => {
+  const current = new Date(date);
+  current.setHours(12, 0, 0, 0);
+  const day = current.getDay() || 7;
+  const monday = new Date(current);
+  monday.setDate(current.getDate() - day + 1);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const toDateKey = (value: Date) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const dateOfMonth = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${dateOfMonth}`;
+  };
+  return { start: toDateKey(monday), end: toDateKey(sunday) };
+};
+
+/** Prefer the Thai flavor stored with an inventory item for customer-facing names. */
+export const formatInventoryName = (item?: Pick<Inventory, 'name' | 'flavor'>): string => {
+  if (!item) return '-';
+  return item.flavor ? `ไอศกรีมทอดรส${item.flavor}` : item.name;
 };
 
 /**
@@ -83,7 +116,7 @@ export const getStockStatusLabel = (item: Inventory): string => {
 /**
  * Validate required fields
  */
-export const validateRequired = (value: any): boolean => {
+export const validateRequired = (value: unknown): boolean => {
   if (typeof value === 'string') {
     return value.trim() !== '';
   }

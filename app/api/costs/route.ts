@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     let query = supabaseAdmin
       .from('costs')
@@ -16,6 +18,8 @@ export async function GET(request: NextRequest) {
 
     if (date) {
       query = query.eq('purchase_date', date);
+    } else if (startDate && endDate) {
+      query = query.gte('purchase_date', startDate).lte('purchase_date', endDate);
     }
 
     const { data, error } = await query.order('created_at', {
@@ -41,8 +45,14 @@ export async function POST(request: NextRequest) {
   try {
     const body: AddCostForm = await request.json();
 
-    // Validation
-    if (!body.inventory_id || body.quantity <= 0 || body.unit_price <= 0) {
+    const isInventoryCost = body.category === 'icecream';
+    if (
+      !body.category ||
+      (isInventoryCost && !body.inventory_id) ||
+      (!isInventoryCost && !body.description?.trim()) ||
+      body.quantity <= 0 ||
+      body.unit_price <= 0
+    ) {
       return NextResponse.json(
         { error: 'Missing or invalid required fields' },
         { status: 400 }
@@ -55,7 +65,9 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('costs')
       .insert({
-        inventory_id: body.inventory_id,
+        inventory_id: isInventoryCost ? body.inventory_id : null,
+        category: body.category,
+        description: isInventoryCost ? 'ต้นทุนไอศกรีม' : body.description.trim(),
         quantity: body.quantity,
         unit_price: body.unit_price,
         total_cost: totalCost,
@@ -66,20 +78,19 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Update inventory stock
-    const { data: inventoryData } = await supabaseAdmin
-      .from('inventory')
-      .select('current_stock')
-      .eq('id', body.inventory_id)
-      .single();
-
-    if (inventoryData) {
-      await supabaseAdmin
+    // Only ice cream purchases affect inventory stock.
+    if (isInventoryCost && body.inventory_id) {
+      const { data: inventoryData, error: inventoryError } = await supabaseAdmin
         .from('inventory')
-        .update({
-          current_stock: inventoryData.current_stock + body.quantity,
-        })
+        .select('current_stock')
+        .eq('id', body.inventory_id)
+        .single();
+      if (inventoryError || !inventoryData) throw inventoryError;
+      const { error: stockError } = await supabaseAdmin
+        .from('inventory')
+        .update({ current_stock: inventoryData.current_stock + body.quantity })
         .eq('id', body.inventory_id);
+      if (stockError) throw stockError;
     }
 
     return NextResponse.json(data as Cost, { status: 201 });

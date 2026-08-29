@@ -39,6 +39,7 @@ export default function ReportsPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchReports();
   }, []);
 
@@ -101,16 +102,16 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="page-shell">
       <Toast ref={toast} />
       
-      <div className="mb-6">
+      <div className="page-hero">
         <h1 className="text-3xl font-bold mb-2">รายงานประจำวัน</h1>
         <p className="text-gray-600">สรุปรายได้ ต้นทุน และกำไร</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="stats-grid grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="bg-gradient-to-br from-green-50 to-green-100">
           <div className="text-center">
             <i className="pi pi-money-bill text-2xl text-green-600 mb-2"></i>
@@ -154,7 +155,7 @@ export default function ReportsPage() {
 
       {/* Filters */}
       <Card className="mb-6">
-        <div className="flex gap-4 items-end flex-wrap">
+        <div className="report-filters">
           <div>
             <label className="block mb-2 font-medium">วันเริ่มต้น</label>
             <Calendar
@@ -195,6 +196,7 @@ export default function ReportsPage() {
           paginator
           rows={10}
           stripedRows
+          emptyMessage="ยังไม่มีข้อมูลรายงานในช่วงเวลานี้"
           tableStyle={{ minWidth: '50rem' }}
         >
           <Column field="report_date" header="วันที่" body={dateBodyTemplate} />

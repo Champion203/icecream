@@ -8,15 +8,17 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import type { Sale } from '@/schema/types';
 import { salesAPI } from '@/lib/api';
-import { formatCurrency, formatDate, formatTime, getTodayDate } from '@/lib/utils';
+import { formatCurrency, formatInventoryName, formatTime, getTodayDate } from '@/lib/utils';
 import { RecordSaleForm } from '@/components/forms/RecordSaleForm';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
+import Swal from 'sweetalert2';
 
 export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [todayDate] = useState(getTodayDate());
   const toast = useRef<Toast>(null);
 
@@ -36,6 +38,7 @@ export default function SalesPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSales();
   }, []);
 
@@ -49,23 +52,62 @@ export default function SalesPage() {
   const timeBodyTemplate = (rowData: Sale) => (
     <span className="text-gray-600">{formatTime(rowData.sale_time)}</span>
   );
+  const nameBodyTemplate = (rowData: Sale) => formatInventoryName(rowData.inventory);
 
   const actionBodyTemplate = (rowData: Sale) => (
-    <Button
-      icon="pi pi-trash"
-      severity="danger"
-      text
-      onClick={() => handleDelete(rowData.id)}
-    />
+    <div className="flex gap-1">
+      <Button
+        icon="pi pi-pencil"
+        label="แก้ไข"
+        severity="info"
+        text
+        onClick={() => {
+          setSelectedSale(rowData);
+          setShowDialog(true);
+        }}
+      />
+      <Button
+        icon="pi pi-trash"
+        label="ลบ"
+        severity="danger"
+        text
+        onClick={() => handleDelete(rowData)}
+      />
+    </div>
   );
 
-  const handleDelete = async (id: string) => {
-    // TODO: Implement delete functionality
-    toast.current?.show({
-      severity: 'info',
-      summary: 'ข้อมูล',
-      detail: 'ยังไม่ได้เพิ่มฟังก์ชันลบ',
+  const handleDelete = async (sale: Sale) => {
+    const result = await Swal.fire({
+      title: 'ลบรายการขายนี้?',
+      text: `${formatInventoryName(sale.inventory)} จำนวน ${sale.quantity_sold} ชิ้น สินค้าจะถูกคืนเข้าสต็อก`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'ลบรายการ',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#d33',
     });
+    if (!result.isConfirmed) return;
+
+    try {
+      await salesAPI.delete(sale.id);
+      await fetchSales();
+      toast.current?.show({
+        severity: 'success',
+        summary: 'ลบสำเร็จ',
+        detail: 'ลบรายการขายและคืนสินค้าเข้าสู่สต็อกแล้ว',
+      });
+    } catch {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'ข้อผิดพลาด',
+        detail: 'ไม่สามารถลบรายการขายได้',
+      });
+    }
+  };
+
+  const closeEditDialog = () => {
+    setShowDialog(false);
+    setSelectedSale(null);
   };
 
   if (isLoading) {
@@ -77,16 +119,16 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="page-shell">
       <Toast ref={toast} />
       
-      <div className="mb-6">
+      <div className="page-hero">
         <h1 className="text-3xl font-bold mb-2">บันทึกการขาย</h1>
         <p className="text-gray-600">วันที่ {new Date().toLocaleDateString('th-TH')}</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="sales-stats-grid stats-grid grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="bg-gradient-to-br from-green-50 to-green-100">
           <div className="text-center">
             <i className="pi pi-money-bill text-2xl text-green-600 mb-2"></i>
@@ -126,17 +168,37 @@ export default function SalesPage() {
           paginator
           rows={10}
           stripedRows
+          emptyMessage="ยังไม่มีรายการขายในวันนี้"
           tableStyle={{ minWidth: '50rem' }}
         >
-          <Column field="inventory.name" header="ชื่อไอติม" />
+          <Column header="ชื่อไอติม" body={nameBodyTemplate} />
           <Column field="inventory.flavor" header="รสชาติ" />
           <Column field="quantity_sold" header="จำนวน" />
           <Column field="unit_price" header="ราคาต่อหน่วย" body={(rowData) => formatCurrency(rowData.unit_price)} />
           <Column field="total_revenue" header="รายได้" body={revenueBodyTemplate} />
           <Column field="sale_time" header="เวลา" body={timeBodyTemplate} />
-          <Column header="ดำเนินการ" body={actionBodyTemplate} style={{ width: '100px' }} />
+          <Column header="ดำเนินการ" body={actionBodyTemplate} style={{ width: '12rem' }} />
         </DataTable>
       </Card>
+
+      <Dialog
+        header="แก้ไขรายการขาย"
+        visible={showDialog}
+        onHide={closeEditDialog}
+        modal
+        style={{ width: '90vw', maxWidth: '500px' }}
+      >
+        {selectedSale && (
+          <RecordSaleForm
+            key={selectedSale.id}
+            initialData={selectedSale}
+            onSuccess={async () => {
+              closeEditDialog();
+              await fetchSales();
+            }}
+          />
+        )}
+      </Dialog>
     </div>
   );
 }

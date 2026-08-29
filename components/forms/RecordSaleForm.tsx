@@ -4,12 +4,16 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from 'primereact/button';
-import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
 import { Toast } from 'primereact/toast';
 import { useRef, useEffect, useState } from 'react';
-import type { RecordSaleForm as IRecordSaleForm, Inventory } from '@/schema/types';
+import type {
+  RecordSaleForm as IRecordSaleForm,
+  Inventory,
+  Sale,
+} from '@/schema/types';
 import { inventoryAPI, salesAPI } from '@/lib/api';
+import { formatInventoryName } from '@/lib/utils';
 
 const schema = z.object({
   inventory_id: z.string().min(1, 'เลือกไอติมจำเป็น'),
@@ -19,9 +23,10 @@ const schema = z.object({
 
 interface RecordSaleFormProps {
   onSuccess?: () => void;
+  initialData?: Sale;
 }
 
-export function RecordSaleForm({ onSuccess }: RecordSaleFormProps) {
+export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) {
   const toast = useRef<Toast>(null);
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,16 +36,24 @@ export function RecordSaleForm({ onSuccess }: RecordSaleFormProps) {
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-    watch,
   } = useForm<IRecordSaleForm>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      inventory_id: initialData?.inventory_id || '',
+      quantity_sold: initialData?.quantity_sold,
+      unit_price: initialData?.unit_price,
+    },
   });
 
   useEffect(() => {
     const fetchInventory = async () => {
       try {
         const res = await inventoryAPI.getAll();
-        setInventory(res.data.filter((item) => item.status === 'active'));
+        setInventory(
+          res.data
+            .filter((item) => item.status === 'active')
+            .map((item) => ({ ...item, name: formatInventoryName(item) }))
+        );
       } catch (error) {
         toast.current?.show({
           severity: 'error',
@@ -55,21 +68,33 @@ export function RecordSaleForm({ onSuccess }: RecordSaleFormProps) {
     fetchInventory();
   }, []);
 
+  useEffect(() => {
+    reset({
+      inventory_id: initialData?.inventory_id || '',
+      quantity_sold: initialData?.quantity_sold,
+      unit_price: initialData?.unit_price,
+    });
+  }, [initialData, reset]);
+
   const onSubmit = async (data: IRecordSaleForm) => {
     try {
-      await salesAPI.create(data);
+      if (initialData) {
+        await salesAPI.update(initialData.id, data);
+      } else {
+        await salesAPI.create(data);
+      }
       toast.current?.show({
         severity: 'success',
         summary: 'สำเร็จ',
-        detail: 'บันทึกการขายสำเร็จแล้ว',
+        detail: initialData ? 'แก้ไขรายการขายสำเร็จแล้ว' : 'บันทึกการขายสำเร็จแล้ว',
       });
-      reset();
+      if (!initialData) reset();
       onSuccess?.();
     } catch (error) {
       toast.current?.show({
         severity: 'error',
         summary: 'ข้อผิดพลาด',
-        detail: 'ไม่สามารถบันทึกการขาย',
+        detail: initialData ? 'ไม่สามารถแก้ไขรายการขาย' : 'ไม่สามารถบันทึกการขาย',
       });
     }
   };
@@ -77,6 +102,8 @@ export function RecordSaleForm({ onSuccess }: RecordSaleFormProps) {
   return (
     <>
       <Toast ref={toast} />
+      {/* React Hook Form creates a stable submit handler; this is not a ref read. */}
+      {/* eslint-disable-next-line react-hooks/refs */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label className="block mb-2 font-medium">เลือกไอติม</label>
@@ -85,7 +112,11 @@ export function RecordSaleForm({ onSuccess }: RecordSaleFormProps) {
             control={control}
             render={({ field }) => (
               <Dropdown
-                {...field}
+                inputId={field.name}
+                name={field.name}
+                value={field.value || null}
+                onChange={(event) => field.onChange(event.value)}
+                onBlur={field.onBlur}
                 options={inventory}
                 optionLabel="name"
                 optionValue="id"
@@ -108,11 +139,21 @@ export function RecordSaleForm({ onSuccess }: RecordSaleFormProps) {
             name="quantity_sold"
             control={control}
             render={({ field }) => (
-              <InputNumber
-                {...field}
-                value={field.value || undefined}
-                onValueChange={(e) => field.onChange(e.value)}
-                className="w-full"
+              <input
+                id={field.name}
+                name={field.name}
+                type="number"
+                value={field.value ?? ''}
+                onChange={(event) =>
+                  field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)
+                }
+                onBlur={field.onBlur}
+                ref={field.ref}
+                min={1}
+                step={1}
+                inputMode="numeric"
+                className="p-inputtext p-component w-full"
+                placeholder="0"
               />
             )}
           />
@@ -129,14 +170,21 @@ export function RecordSaleForm({ onSuccess }: RecordSaleFormProps) {
             name="unit_price"
             control={control}
             render={({ field }) => (
-              <InputNumber
-                {...field}
-                value={field.value || undefined}
-                onValueChange={(e) => field.onChange(e.value)}
-                mode="currency"
-                currency="THB"
-                locale="th-TH"
-                className="w-full"
+              <input
+                id={field.name}
+                name={field.name}
+                type="number"
+                value={field.value ?? ''}
+                onChange={(event) =>
+                  field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)
+                }
+                onBlur={field.onBlur}
+                ref={field.ref}
+                min={0.01}
+                step="0.01"
+                inputMode="decimal"
+                className="p-inputtext p-component w-full"
+                placeholder="0.00"
               />
             )}
           />
@@ -149,8 +197,8 @@ export function RecordSaleForm({ onSuccess }: RecordSaleFormProps) {
 
         <Button
           type="submit"
-          label="บันทึกการขาย"
-          icon="pi pi-check"
+          label={initialData ? 'บันทึกการแก้ไข' : 'บันทึกการขาย'}
+          icon={initialData ? 'pi pi-save' : 'pi pi-check'}
           loading={isSubmitting}
           className="w-full"
         />

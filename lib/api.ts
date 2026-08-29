@@ -7,6 +7,7 @@ import type {
   AddInventoryForm,
   AddCostForm,
   RecordSaleForm,
+  DashboardStats,
 } from '@/schema/types';
 
 const api = axios.create({
@@ -28,7 +29,10 @@ export const inventoryAPI = {
 export const costsAPI = {
   getAll: () => api.get<Cost[]>('/costs'),
   getByDate: (date: string) => api.get<Cost[]>(`/costs?date=${date}`),
+  getByRange: (startDate: string, endDate: string) =>
+    api.get<Cost[]>(`/costs?startDate=${startDate}&endDate=${endDate}`),
   create: (data: AddCostForm) => api.post<Cost>('/costs', data),
+  delete: (id: string) => api.delete(`/costs/${id}`),
   getTotalByDate: (date: string) =>
     api.get<{ total: number }>(`/costs/total?date=${date}`),
 };
@@ -38,6 +42,8 @@ export const salesAPI = {
   getAll: () => api.get<Sale[]>('/sales'),
   getByDate: (date: string) => api.get<Sale[]>(`/sales?date=${date}`),
   create: (data: RecordSaleForm) => api.post<Sale>('/sales', data),
+  update: (id: string, data: RecordSaleForm) => api.put<Sale>(`/sales/${id}`, data),
+  delete: (id: string) => api.delete(`/sales/${id}`),
   getTotalByDate: (date: string) =>
     api.get<{ total: number }>(`/sales/total?date=${date}`),
   getTopSellingFlavors: () => api.get('/sales/top-flavors'),
@@ -52,7 +58,7 @@ export const reportsAPI = {
 
 // Dashboard APIs
 export const dashboardAPI = {
-  getStats: () => api.get('/dashboard/stats'),
+  getStats: () => api.get<DashboardStats>('/dashboard'),
   getRevenueTrend: (days?: number) =>
     api.get(`/dashboard/revenue-trend?days=${days || 30}`),
   getProfitTrend: (days?: number) =>

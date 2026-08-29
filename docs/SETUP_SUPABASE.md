@@ -81,6 +81,9 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
 
 ## 📊 ขั้นตอนที่ 4: สร้าง Database Schema (ตารางทั้งหมด)
 
+> หากสร้างฐานข้อมูลไว้ก่อนเพิ่มหมวดต้นทุน ให้รันไฟล์
+> `docs/MIGRATE_COST_CATEGORIES.sql` ใน SQL Editor หนึ่งครั้งก่อนใช้งานหน้าต้นทุน
+
 ### 4.1 ไปที่ SQL Editor
 
 ใน Supabase Dashboard:

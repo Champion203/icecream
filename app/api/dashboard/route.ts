@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import type { DashboardStats, Inventory, Sale, Cost } from '@/schema/types';
+import type { DashboardStats, Sale } from '@/schema/types';
 
 /**
- * GET /api/dashboard/stats - Get dashboard statistics for today
+ * GET /api/dashboard - Get dashboard statistics for the current week
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const statType = searchParams.get('type');
 
-    if (statType === 'today') {
-      return getTodayStats();
-    } else if (statType === 'all') {
+    if (statType === 'all') {
       return getAllTimeStats();
     }
 
-    // Default: today stats
-    return getTodayStats();
+    return getCurrentWeekStats();
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     return NextResponse.json(
@@ -27,20 +24,35 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function getTodayStats() {
-  const today = new Date().toISOString().split('T')[0];
+async function getCurrentWeekStats() {
+  const bangkokDate = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })
+  );
+  const day = bangkokDate.getDay() || 7;
+  const monday = new Date(bangkokDate);
+  monday.setDate(bangkokDate.getDate() - day + 1);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const toDateKey = (value: Date) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const date = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${date}`;
+  };
+  const startDate = toDateKey(monday);
+  const endDate = toDateKey(sunday);
 
-  // Get today's sales
-  const { data: todaySales } = await supabaseAdmin
+  const { data: weekSales } = await supabaseAdmin
     .from('sales')
     .select('*')
-    .eq('sale_date', today);
+    .gte('sale_date', startDate)
+    .lte('sale_date', endDate);
 
-  // Get today's costs
-  const { data: todayCosts } = await supabaseAdmin
+  const { data: weekCosts } = await supabaseAdmin
     .from('costs')
     .select('*')
-    .eq('purchase_date', today);
+    .gte('purchase_date', startDate)
+    .lte('purchase_date', endDate);
 
   // Get inventory
   const { data: inventory } = await supabaseAdmin
@@ -48,16 +60,16 @@ async function getTodayStats() {
     .select('*')
     .eq('status', 'active');
 
-  const totalRevenue = (todaySales || []).reduce(
+  const totalRevenue = (weekSales || []).reduce(
     (sum, sale) => sum + sale.total_revenue,
     0
   );
-  const totalCost = (todayCosts || []).reduce(
+  const totalCost = (weekCosts || []).reduce(
     (sum, cost) => sum + cost.total_cost,
     0
   );
   const totalProfit = totalRevenue - totalCost;
-  const totalItemsSold = (todaySales || []).reduce(
+  const totalItemsSold = (weekSales || []).reduce(
     (sum, sale) => sum + sale.quantity_sold,
     0
   );
@@ -68,7 +80,7 @@ async function getTodayStats() {
   );
 
   // Get top selling flavors
-  const topSellingFlavors = await getTopSellingFlavors(todaySales || []);
+  const topSellingFlavors = await getTopSellingFlavors(weekSales || []);
 
   const stats: DashboardStats = {
     totalRevenue,

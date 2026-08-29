@@ -32,6 +32,7 @@ export default function InventoryPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchInventory();
   }, []);
 
@@ -60,6 +61,9 @@ export default function InventoryPage() {
   const lowStockItems = inventory.filter(
     (item) => item.status === 'active' && item.current_stock > 0 && item.current_stock <= 10
   );
+  const readyItems = inventory.filter(
+    (item) => item.status === 'active' && item.current_stock > 10
+  );
 
   if (isLoading) {
     return (
@@ -70,10 +74,10 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="page-shell">
       <Toast ref={toast} />
       
-      <div className="mb-6 flex justify-between items-start">
+      <div className="page-hero flex justify-between items-center gap-3">
         <div>
           <h1 className="text-3xl font-bold mb-2">จัดการสินค้า</h1>
           <p className="text-gray-600">รายการไอติมทั้งหมด</p>
@@ -87,7 +91,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="inventory-stats-grid stats-grid grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
           <div className="text-center">
             <i className="pi pi-list text-2xl text-blue-600 mb-2"></i>
@@ -145,17 +149,23 @@ export default function InventoryPage() {
         </Card>
       )}
 
-      {/* All Items */}
+      {/* Ready to sell */}
       <Card>
-        <h3 className="text-lg font-bold mb-4">รายการไอติมทั้งหมด</h3>
+        <h3 className="text-lg font-bold mb-4">พร้อมจำหน่าย</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {inventory.map((item) => (
+          {readyItems.map((item) => (
             <InventoryCard
               key={item.id}
               item={item}
               onDelete={handleDelete}
             />
           ))}
+          {readyItems.length === 0 && (
+            <div className="py-8 text-center text-gray-500 col-span-full">
+              <i className="pi pi-box text-3xl block mb-3" />
+              ยังไม่มีสินค้าที่พร้อมจำหน่าย
+            </div>
+          )}
         </div>
       </Card>
 

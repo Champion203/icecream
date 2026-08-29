@@ -12,9 +12,13 @@ export interface Inventory {
 }
 
 // Costs Types
+export type CostCategory = 'icecream' | 'topping' | 'oil' | 'equipment' | 'other';
+
 export interface Cost {
   id: string;
-  inventory_id: string;
+  inventory_id: string | null;
+  category: CostCategory;
+  description: string | null;
   quantity: number;
   unit_price: number;
   total_cost: number;
@@ -69,7 +73,9 @@ export interface AddInventoryForm {
 }
 
 export interface AddCostForm {
-  inventory_id: string;
+  inventory_id: string | null;
+  category: CostCategory;
+  description: string;
   quantity: number;
   unit_price: number;
   purchase_date: string;

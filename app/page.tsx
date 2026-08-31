@@ -8,7 +8,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Bar } from 'react-chartjs-2';
 import type { DashboardStats } from '@/schema/types';
 import { dashboardAPI } from '@/lib/api';
-import { formatCurrency, formatDate, getWeekRange } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { InventoryCard } from '@/components/InventoryCard';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
@@ -17,7 +17,6 @@ export default function Dashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const weekRange = getWeekRange();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -85,7 +84,7 @@ export default function Dashboard() {
       <div className="page-hero">
         <h1 className="text-3xl font-bold mb-2">แดชบอร์ด</h1>
         <p className="text-gray-600">
-          สรุปประจำสัปดาห์ {formatDate(weekRange.start)} – {formatDate(weekRange.end)}
+          สรุปยอดขาย ต้นทุน และกำไรทั้งหมด
         </p>
       </div>
 
@@ -93,7 +92,7 @@ export default function Dashboard() {
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
           <div className="text-center">
             <i className="pi pi-shopping-cart text-2xl text-blue-600 mb-2"></i>
-            <p className="text-gray-600 text-sm mb-1">ยอดขายสัปดาห์นี้</p>
+            <p className="text-gray-600 text-sm mb-1">ยอดขายทั้งหมด</p>
             <p className="text-2xl font-bold text-blue-600">{stats?.totalItemsSold || 0}</p>
           </div>
         </Card>
@@ -101,7 +100,7 @@ export default function Dashboard() {
         <Card className="bg-gradient-to-br from-green-50 to-green-100">
           <div className="text-center">
             <i className="pi pi-money-bill text-2xl text-green-600 mb-2"></i>
-            <p className="text-gray-600 text-sm mb-1">รายได้สัปดาห์นี้</p>
+            <p className="text-gray-600 text-sm mb-1">รายได้ทั้งหมด</p>
             <p className="text-xl font-bold text-green-600">{formatCurrency(stats?.totalRevenue || 0)}</p>
           </div>
         </Card>
@@ -109,7 +108,7 @@ export default function Dashboard() {
         <Card className="bg-gradient-to-br from-red-50 to-red-100">
           <div className="text-center">
             <i className="pi pi-exclamation-circle text-2xl text-red-600 mb-2"></i>
-            <p className="text-gray-600 text-sm mb-1">ต้นทุนสัปดาห์นี้</p>
+            <p className="text-gray-600 text-sm mb-1">ต้นทุนทั้งหมด</p>
             <p className="text-xl font-bold text-red-600">{formatCurrency(stats?.totalCost || 0)}</p>
           </div>
         </Card>
@@ -117,7 +116,7 @@ export default function Dashboard() {
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
           <div className="text-center">
             <i className="pi pi-chart-pie text-2xl text-purple-600 mb-2"></i>
-            <p className="text-gray-600 text-sm mb-1">กำไรสัปดาห์นี้</p>
+            <p className="text-gray-600 text-sm mb-1">กำไรทั้งหมด</p>
             <p className="text-xl font-bold text-purple-600">{formatCurrency(stats?.totalProfit || 0)}</p>
           </div>
         </Card>
@@ -125,7 +124,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <Card className="dashboard-chart-card">
-          <h3 className="text-lg font-bold mb-4">สรุปต้นทุน-รายได้-กำไรประจำสัปดาห์</h3>
+          <h3 className="text-lg font-bold mb-4">สรุปต้นทุน-รายได้-กำไรทั้งหมด</h3>
           <Bar data={chartData} options={{ responsive: true }} />
         </Card>
 

@@ -22,13 +22,18 @@ import { AddCostForm } from '@/components/forms/AddCostForm';
 export default function CostsPage() {
   const [costs, setCosts] = useState<Cost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const toast = useRef<Toast>(null);
 
-  const fetchCosts = async (weekDate: Date = selectedDate || new Date()) => {
+  const fetchCosts = async (weekDate: Date | null = selectedDate) => {
+    setIsLoading(true);
     try {
-      const { start, end } = getWeekRange(weekDate);
-      const res = await costsAPI.getByRange(start, end);
+      const res = weekDate
+        ? await costsAPI.getByRange(
+            getWeekRange(weekDate).start,
+            getWeekRange(weekDate).end
+          )
+        : await costsAPI.getAll();
       setCosts(res.data);
     } catch (error) {
       toast.current?.show({
@@ -109,7 +114,7 @@ export default function CostsPage() {
     />
   );
 
-  const weekRange = getWeekRange(selectedDate || new Date());
+  const weekRange = selectedDate ? getWeekRange(selectedDate) : null;
 
   if (isLoading) {
     return (
@@ -126,7 +131,9 @@ export default function CostsPage() {
       <div className="page-hero">
         <h1 className="text-3xl font-bold mb-2">บันทึกต้นทุน</h1>
         <p className="text-gray-600">
-          สัปดาห์วันที่ {formatDate(weekRange.start)} – {formatDate(weekRange.end)}
+          {weekRange
+            ? `สัปดาห์วันที่ ${formatDate(weekRange.start)} – ${formatDate(weekRange.end)}`
+            : 'แสดงต้นทุนทั้งหมด'}
         </p>
       </div>
 
@@ -135,7 +142,9 @@ export default function CostsPage() {
       <Card className="bg-gradient-to-br from-red-50 to-red-100">
         <div className="text-center">
           <i className="pi pi-exclamation-circle text-3xl text-red-600 mb-2"></i>
-          <p className="text-gray-600 text-sm mb-1">ต้นทุนรวมประจำสัปดาห์</p>
+          <p className="text-gray-600 text-sm mb-1">
+            {weekRange ? 'ต้นทุนรวมในสัปดาห์' : 'ต้นทุนรวมทั้งหมด'}
+          </p>
           <p className="text-3xl font-bold text-red-600">{formatCurrency(totalCost)}</p>
         </div>
       </Card>
@@ -144,23 +153,24 @@ export default function CostsPage() {
       {/* Add Cost Form */}
       <Card className="mb-6">
         <h3 className="text-lg font-bold mb-4">เพิ่มต้นทุนใหม่</h3>
-        <AddCostForm onSuccess={() => fetchCosts()} />
+        <AddCostForm onSuccess={() => fetchCosts(selectedDate)} />
       </Card>
 
       {/* Costs List */}
       <Card>
         <div className="mb-4 flex gap-2 items-center">
-          <h3 className="text-lg font-bold flex-1">รายการต้นทุนประจำสัปดาห์</h3>
+          <h3 className="text-lg font-bold flex-1">รายการต้นทุน</h3>
           <Calendar
             value={selectedDate}
             onChange={(e) => {
-              setSelectedDate((e.value as Date) || null);
-              if (e.value) {
-                fetchCosts(e.value as Date);
-              }
+              const date = (e.value as Date) || null;
+              setSelectedDate(date);
+              fetchCosts(date);
             }}
             showIcon
             dateFormat="yy/mm/dd"
+            placeholder="กรองตามสัปดาห์"
+            showButtonBar
           />
         </div>
         <DataTable
@@ -168,7 +178,7 @@ export default function CostsPage() {
           paginator
           rows={10}
           stripedRows
-          emptyMessage="ยังไม่มีรายการต้นทุนในสัปดาห์นี้"
+          emptyMessage="ไม่มีรายการต้นทุนในช่วงเวลานี้"
           tableStyle={{ minWidth: '50rem' }}
         >
           <Column field="category" header="หมวด" body={categoryBodyTemplate} />

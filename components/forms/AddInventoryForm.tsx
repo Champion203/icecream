@@ -151,7 +151,11 @@ export function AddInventoryForm({ onSuccess }: AddInventoryFormProps) {
                   type="number"
                   value={field.value ?? ''}
                   onChange={(event) =>
-                    field.onChange(event.target.value === '' ? undefined : event.target.valueAsNumber)
+                    field.onChange(
+                      event.target.value === ''
+                        ? null
+                        : event.target.valueAsNumber
+                    )
                   }
                   onBlur={field.onBlur}
                   ref={field.ref}

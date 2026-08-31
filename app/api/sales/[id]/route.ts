@@ -4,11 +4,33 @@ import type { RecordSaleForm, Sale } from '@/schema/types';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+const TOPPING_PRICES: Record<string, number> = {
+  'เม็ดน้ำตาลเรนโบว์': 5,
+  เยลลี่แดง: 5,
+  'เวเฟอร์สติ๊กแท่ง': 5,
+  คอนแฟลก: 5,
+  ไมโล: 5,
+  โอรีโอ: 5,
+  โอวัลตินเฟลค: 5,
+  มาร์ชเมลโลว์: 5,
+  ช็อกชิพ: 10,
+  วิปครีม: 10,
+  บิสคอฟ: 10,
+};
+
 export async function PUT(request: Request, { params }: RouteContext) {
   try {
     const { id } = await params;
     const body: RecordSaleForm = await request.json();
-    if (!body.inventory_id || body.quantity_sold <= 0 || body.unit_price <= 0) {
+    const invalidToppings = (body.toppings || []).some(
+      (topping) => TOPPING_PRICES[topping.name] !== topping.price
+    );
+    if (
+      !body.inventory_id ||
+      body.quantity_sold <= 0 ||
+      body.unit_price <= 0 ||
+      invalidToppings
+    ) {
       return NextResponse.json({ error: 'ข้อมูลรายการขายไม่ถูกต้อง' }, { status: 400 });
     }
 
@@ -57,6 +79,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
         quantity_sold: body.quantity_sold,
         unit_price: body.unit_price,
         total_revenue: body.quantity_sold * body.unit_price,
+        toppings: body.toppings || [],
       })
       .eq('id', id)
       .select('*, inventory(*)')

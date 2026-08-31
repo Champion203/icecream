@@ -34,6 +34,7 @@ export interface Sale {
   quantity_sold: number;
   unit_price: number;
   total_revenue: number;
+  toppings: SaleTopping[];
   sale_date: string;
   sale_time: string;
   created_at: string;
@@ -85,4 +86,14 @@ export interface RecordSaleForm {
   inventory_id: string;
   quantity_sold: number;
   unit_price: number;
+  toppings: SaleTopping[];
+}
+
+export interface RecordSalesForm {
+  items: RecordSaleForm[];
+}
+
+export interface SaleTopping {
+  name: string;
+  price: number;
 }

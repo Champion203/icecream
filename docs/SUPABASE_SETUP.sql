@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS sales (
   quantity_sold INTEGER NOT NULL,
   unit_price DECIMAL(10, 2) NOT NULL,
   total_revenue DECIMAL(10, 2) NOT NULL,
+  toppings JSONB NOT NULL DEFAULT '[]'::jsonb,
   sale_date DATE NOT NULL,
   sale_time TIME NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()

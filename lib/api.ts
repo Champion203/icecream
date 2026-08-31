@@ -7,6 +7,7 @@ import type {
   AddInventoryForm,
   AddCostForm,
   RecordSaleForm,
+  RecordSalesForm,
   DashboardStats,
 } from '@/schema/types';
 
@@ -42,6 +43,7 @@ export const salesAPI = {
   getAll: () => api.get<Sale[]>('/sales'),
   getByDate: (date: string) => api.get<Sale[]>(`/sales?date=${date}`),
   create: (data: RecordSaleForm) => api.post<Sale>('/sales', data),
+  createMany: (data: RecordSalesForm) => api.post<Sale[]>('/sales', data),
   update: (id: string, data: RecordSaleForm) => api.put<Sale>(`/sales/${id}`, data),
   delete: (id: string) => api.delete(`/sales/${id}`),
   getTotalByDate: (date: string) =>
@@ -51,14 +53,15 @@ export const salesAPI = {
 
 // Daily Reports APIs
 export const reportsAPI = {
-  getAll: () => api.get<DailyReport[]>('/reports'),
+  getAll: (startDate?: string, endDate?: string) =>
+    api.get<DailyReport[]>('/reports', { params: { startDate, endDate } }),
   getByDate: (date: string) => api.get<DailyReport>(`/reports/${date}`),
   generate: () => api.post('/reports/generate'),
 };
 
 // Dashboard APIs
 export const dashboardAPI = {
-  getStats: () => api.get<DashboardStats>('/dashboard'),
+  getStats: () => api.get<DashboardStats>('/dashboard?type=all'),
   getRevenueTrend: (days?: number) =>
     api.get(`/dashboard/revenue-trend?days=${days || 30}`),
   getProfitTrend: (days?: number) =>

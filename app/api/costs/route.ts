@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-
     let query = supabaseAdmin
       .from('costs')
       .select('*, inventory(*)');

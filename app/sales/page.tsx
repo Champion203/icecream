@@ -10,6 +10,7 @@ import type { Sale } from '@/schema/types';
 import { salesAPI } from '@/lib/api';
 import { formatCurrency, formatInventoryName, formatTime, getTodayDate } from '@/lib/utils';
 import { RecordSaleForm } from '@/components/forms/RecordSaleForm';
+import { RecordSalesForm } from '@/components/forms/RecordSalesForm';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
 import Swal from 'sweetalert2';
@@ -53,6 +54,10 @@ export default function SalesPage() {
     <span className="text-gray-600">{formatTime(rowData.sale_time)}</span>
   );
   const nameBodyTemplate = (rowData: Sale) => formatInventoryName(rowData.inventory);
+  const toppingsBodyTemplate = (rowData: Sale) =>
+    rowData.toppings?.length
+      ? rowData.toppings.map((topping) => topping.name).join(', ')
+      : '-';
 
   const actionBodyTemplate = (rowData: Sale) => (
     <div className="flex gap-1">
@@ -157,7 +162,7 @@ export default function SalesPage() {
       {/* Add Sale Form */}
       <Card className="mb-6">
         <h3 className="text-lg font-bold mb-4">เพิ่มการขายใหม่</h3>
-        <RecordSaleForm onSuccess={() => fetchSales()} />
+        <RecordSalesForm onSuccess={() => fetchSales()} />
       </Card>
 
       {/* Sales List */}
@@ -173,6 +178,7 @@ export default function SalesPage() {
         >
           <Column header="ชื่อไอติม" body={nameBodyTemplate} />
           <Column field="inventory.flavor" header="รสชาติ" />
+          <Column header="ท็อปปิ้ง" body={toppingsBodyTemplate} />
           <Column field="quantity_sold" header="จำนวน" />
           <Column field="unit_price" header="ราคาต่อหน่วย" body={(rowData) => formatCurrency(rowData.unit_price)} />
           <Column field="total_revenue" header="รายได้" body={revenueBodyTemplate} />

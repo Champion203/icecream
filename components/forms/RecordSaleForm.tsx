@@ -5,21 +5,38 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
+import { MultiSelect } from 'primereact/multiselect';
 import { Toast } from 'primereact/toast';
 import { useRef, useEffect, useState } from 'react';
 import type {
   RecordSaleForm as IRecordSaleForm,
   Inventory,
   Sale,
+  SaleTopping,
 } from '@/schema/types';
 import { inventoryAPI, salesAPI } from '@/lib/api';
 import { formatInventoryName } from '@/lib/utils';
 
-const schema = z.object({
+export const saleFormSchema = z.object({
   inventory_id: z.string().min(1, 'เลือกไอติมจำเป็น'),
   quantity_sold: z.number().positive('จำนวนต้องมากกว่า 0'),
   unit_price: z.number().positive('ราคาต้องมากกว่า 0'),
+  toppings: z.array(z.object({ name: z.string(), price: z.number().nonnegative() })),
 });
+
+export const TOPPING_OPTIONS: SaleTopping[] = [
+  { name: 'เม็ดน้ำตาลเรนโบว์', price: 5 },
+  { name: 'เยลลี่แดง', price: 5 },
+  { name: 'เวเฟอร์สติ๊กแท่ง', price: 5 },
+  { name: 'คอนแฟลก', price: 5 },
+  { name: 'ไมโล', price: 5 },
+  { name: 'โอรีโอ', price: 5 },
+  { name: 'โอวัลตินเฟลค', price: 5 },
+  { name: 'มาร์ชเมลโลว์', price: 5 },
+  { name: 'ช็อกชิพ', price: 10 },
+  { name: 'วิปครีม', price: 10 },
+  { name: 'บิสคอฟ', price: 10 },
+];
 
 interface RecordSaleFormProps {
   onSuccess?: () => void;
@@ -35,13 +52,16 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
     control,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<IRecordSaleForm>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(saleFormSchema),
     defaultValues: {
       inventory_id: initialData?.inventory_id || '',
       quantity_sold: initialData?.quantity_sold,
       unit_price: initialData?.unit_price,
+      toppings: initialData?.toppings || [],
     },
   });
 
@@ -73,6 +93,7 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
       inventory_id: initialData?.inventory_id || '',
       quantity_sold: initialData?.quantity_sold,
       unit_price: initialData?.unit_price,
+      toppings: initialData?.toppings || [],
     });
   }, [initialData, reset]);
 
@@ -162,6 +183,46 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
               {errors.quantity_sold.message}
             </span>
           )}
+        </div>
+
+        <div>
+          <label className="block mb-2 font-medium">เพิ่มท็อปปิ้ง (เลือกได้หลายอย่าง)</label>
+          <Controller
+            name="toppings"
+            control={control}
+            render={({ field }) => (
+              <MultiSelect
+                inputId={field.name}
+                value={field.value.map((topping) => topping.name)}
+                options={TOPPING_OPTIONS.map((topping) => ({
+                  label: `${topping.name} ${topping.price} บาท`,
+                  value: topping.name,
+                }))}
+                onChange={(event) => {
+                  const previousTotal = field.value.reduce(
+                    (sum, topping) => sum + topping.price,
+                    0
+                  );
+                  const selected = TOPPING_OPTIONS.filter((topping) =>
+                    (event.value as string[]).includes(topping.name)
+                  );
+                  const nextTotal = selected.reduce(
+                    (sum, topping) => sum + topping.price,
+                    0
+                  );
+                  field.onChange(selected);
+                  setValue(
+                    'unit_price',
+                    Math.max(0, (getValues('unit_price') || 0) - previousTotal + nextTotal),
+                    { shouldValidate: true, shouldDirty: true }
+                  );
+                }}
+                placeholder="เลือกท็อปปิ้ง"
+                display="chip"
+                className="w-full"
+              />
+            )}
+          />
         </div>
 
         <div>

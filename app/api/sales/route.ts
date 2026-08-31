@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import type { Sale, RecordSaleForm } from '@/schema/types';
+import type { Sale, RecordSaleForm, RecordSalesForm } from '@/schema/types';
+
+const TOPPING_PRICES: Record<string, number> = {
+  'เม็ดน้ำตาลเรนโบว์': 5,
+  เยลลี่แดง: 5,
+  'เวเฟอร์สติ๊กแท่ง': 5,
+  คอนแฟลก: 5,
+  ไมโล: 5,
+  โอรีโอ: 5,
+  โอวัลตินเฟลค: 5,
+  มาร์ชเมลโลว์: 5,
+  ช็อกชิพ: 10,
+  วิปครีม: 10,
+  บิสคอฟ: 10,
+};
 
 /**
  * GET /api/sales - Get all sales or filter by date
@@ -39,55 +53,122 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body: RecordSaleForm = await request.json();
+    const body: RecordSaleForm | RecordSalesForm = await request.json();
+    const isBatch = 'items' in body;
+    const items = isBatch ? body.items : [body];
 
-    // Validation
-    if (!body.inventory_id || body.quantity_sold <= 0 || body.unit_price <= 0) {
+    const hasInvalidItem =
+      items.length === 0 ||
+      items.length > 50 ||
+      items.some((item) => {
+        const toppingNames = new Set<string>();
+        const invalidToppings = (item.toppings || []).some((topping) => {
+          if (toppingNames.has(topping.name)) return true;
+          toppingNames.add(topping.name);
+          return TOPPING_PRICES[topping.name] !== topping.price;
+        });
+        return (
+          !item.inventory_id ||
+          !Number.isInteger(item.quantity_sold) ||
+          item.quantity_sold <= 0 ||
+          !Number.isFinite(item.unit_price) ||
+          item.unit_price <= 0 ||
+          invalidToppings
+        );
+      });
+    if (hasInvalidItem) {
       return NextResponse.json(
         { error: 'Missing or invalid required fields' },
         { status: 400 }
       );
     }
 
-    const totalRevenue = body.quantity_sold * body.unit_price;
-    const now = new Date();
-    const saleDate = now.toISOString().split('T')[0];
-    const saleTime = now.toTimeString().split(' ')[0];
-
-    // Insert sale record
-    const { data, error } = await supabaseAdmin
-      .from('sales')
-      .insert({
-        inventory_id: body.inventory_id,
-        quantity_sold: body.quantity_sold,
-        unit_price: body.unit_price,
-        total_revenue: totalRevenue,
-        sale_date: saleDate,
-        sale_time: saleTime,
-      })
-      .select('*, inventory(*)')
-      .single();
-
-    if (error) throw error;
-
-    // Update inventory stock
-    const { data: inventoryData } = await supabaseAdmin
+    const quantitiesByInventory = new Map<string, number>();
+    for (const item of items) {
+      quantitiesByInventory.set(
+        item.inventory_id,
+        (quantitiesByInventory.get(item.inventory_id) || 0) + item.quantity_sold
+      );
+    }
+    const inventoryIds = [...quantitiesByInventory.keys()];
+    const { data: inventories, error: inventoryError } = await supabaseAdmin
       .from('inventory')
-      .select('current_stock')
-      .eq('id', body.inventory_id)
-      .single();
-
-    if (inventoryData) {
-      const newStock = Math.max(0, inventoryData.current_stock - body.quantity_sold);
-      await supabaseAdmin
-        .from('inventory')
-        .update({
-          current_stock: newStock,
-        })
-        .eq('id', body.inventory_id);
+      .select('id, current_stock')
+      .in('id', inventoryIds)
+      .eq('status', 'active');
+    if (inventoryError) throw inventoryError;
+    if (!inventories || inventories.length !== inventoryIds.length) {
+      return NextResponse.json({ error: 'Inventory not found' }, { status: 400 });
     }
 
-    return NextResponse.json(data as Sale, { status: 201 });
+    for (const inventory of inventories) {
+      const requested = quantitiesByInventory.get(inventory.id) || 0;
+      if (inventory.current_stock < requested) {
+        return NextResponse.json(
+          {
+            error: `Insufficient stock for inventory ${inventory.id}. Available: ${inventory.current_stock}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    const originalStocks = new Map(
+      inventories.map((inventory) => [inventory.id, inventory.current_stock])
+    );
+    const updatedInventoryIds: string[] = [];
+    try {
+      for (const inventory of inventories) {
+        const requested = quantitiesByInventory.get(inventory.id) || 0;
+        const { error } = await supabaseAdmin
+          .from('inventory')
+          .update({ current_stock: inventory.current_stock - requested })
+          .eq('id', inventory.id);
+        if (error) throw error;
+        updatedInventoryIds.push(inventory.id);
+      }
+
+      const now = new Date();
+      const saleDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(now);
+      const saleTime = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Bangkok',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }).format(now);
+      const rows = items.map((item) => ({
+        inventory_id: item.inventory_id,
+        quantity_sold: item.quantity_sold,
+        unit_price: item.unit_price,
+        total_revenue: item.quantity_sold * item.unit_price,
+        toppings: item.toppings || [],
+        sale_date: saleDate,
+        sale_time: saleTime,
+      }));
+      const { data, error } = await supabaseAdmin
+        .from('sales')
+        .insert(rows)
+        .select('*, inventory(*)');
+      if (error) throw error;
+
+      return NextResponse.json(isBatch ? (data as Sale[]) : (data[0] as Sale), {
+        status: 201,
+      });
+    } catch (error) {
+      for (const inventoryId of updatedInventoryIds) {
+        await supabaseAdmin
+        .from('inventory')
+          .update({ current_stock: originalStocks.get(inventoryId) })
+          .eq('id', inventoryId);
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error creating sale:', error);
     return NextResponse.json(

@@ -34,8 +34,8 @@ export const TOPPING_OPTIONS: SaleTopping[] = [
   { name: 'โอวัลตินเฟลค', price: 5 },
   { name: 'มาร์ชเมลโลว์', price: 5 },
   { name: 'ช็อกชิพ', price: 10 },
-  { name: 'วิปครีม', price: 10 },
-  { name: 'บิสคอฟ', price: 10 },
+  { name: 'วิปครีม', price: 15 },
+  { name: 'บิสคอฟ', price: 15 },
 ];
 
 interface RecordSaleFormProps {

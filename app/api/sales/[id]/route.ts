@@ -14,8 +14,8 @@ const TOPPING_PRICES: Record<string, number> = {
   โอวัลตินเฟลค: 5,
   มาร์ชเมลโลว์: 5,
   ช็อกชิพ: 10,
-  วิปครีม: 10,
-  บิสคอฟ: 10,
+  วิปครีม: 15,
+  บิสคอฟ: 15,
 };
 
 export async function PUT(request: Request, { params }: RouteContext) {

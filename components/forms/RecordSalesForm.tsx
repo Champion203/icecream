@@ -138,7 +138,7 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
             ))}
           </div>
           {salesChannel === 'lineman' && (
-            <small className="block mt-2 text-orange-600">Line Man หักค่าธรรมเนียม 30% จากยอดรวม</small>
+            <small className="block mt-2 text-orange-600">Line Man หักค่าธรรมเนียม 32.1% จากยอดรวม</small>
           )}
         </div>
 
@@ -316,7 +316,7 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
         <div className="flex justify-between align-items-center border-top-1 border-gray-200 pt-3">
           <span className="text-lg font-semibold">
             ยอดรับสุทธิ {formatCurrency(total)}
-            {salesChannel === 'lineman' && <small className="block text-sm text-orange-600">หลังหักค่าธรรมเนียม 30%</small>}
+            {salesChannel === 'lineman' && <small className="block text-sm text-orange-600">หลังหักค่าธรรมเนียม 32.1%</small>}
           </span>
           <Button
             type="submit"

@@ -1,7 +1,7 @@
 import type { SaleTopping, SalesChannel } from '@/schema/types';
 export type { SalesChannel } from '@/schema/types';
 
-export const LINE_MAN_FEE_RATE = 0.3;
+export const LINE_MAN_FEE_RATE = 0.321;
 
 export const REGULAR_TOPPING_OPTIONS: SaleTopping[] = [
   { name: 'เม็ดน้ำตาลเรนโบว์', price: 5 },

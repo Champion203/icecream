@@ -152,7 +152,7 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
             ))}
           </div>
           {salesChannel === 'lineman' && (
-            <small className="block mt-2 text-orange-600">Line Man หักค่าธรรมเนียม 30% จากยอดรวม</small>
+            <small className="block mt-2 text-orange-600">Line Man หักค่าธรรมเนียม 32.1% จากยอดรวม</small>
           )}
         </div>
 

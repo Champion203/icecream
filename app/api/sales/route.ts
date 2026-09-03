@@ -1,20 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { Sale, RecordSaleForm, RecordSalesForm } from '@/schema/types';
-
-const TOPPING_PRICES: Record<string, number> = {
-  'เม็ดน้ำตาลเรนโบว์': 5,
-  เยลลี่แดง: 5,
-  'เวเฟอร์สติ๊กแท่ง': 5,
-  คอนแฟลก: 5,
-  ไมโล: 5,
-  โอรีโอ: 5,
-  โอวัลตินเฟลค: 5,
-  มาร์ชเมลโลว์: 5,
-  ช็อกชิพ: 10,
-  วิปครีม: 10,
-  บิสคอฟ: 15,
-};
+import { getNetRevenue, getToppingOptions } from '@/lib/sales-pricing';
 
 /**
  * GET /api/sales - Get all sales or filter by date
@@ -65,7 +52,10 @@ export async function POST(request: NextRequest) {
         const invalidToppings = (item.toppings || []).some((topping) => {
           if (toppingNames.has(topping.name)) return true;
           toppingNames.add(topping.name);
-          return TOPPING_PRICES[topping.name] !== topping.price;
+          const options = getToppingOptions(item.sales_channel || 'regular');
+          return !options.some(
+            (option) => option.name === topping.name && option.price === topping.price
+          );
         });
         return (
           !item.inventory_id ||
@@ -73,6 +63,7 @@ export async function POST(request: NextRequest) {
           item.quantity_sold <= 0 ||
           !Number.isFinite(item.unit_price) ||
           item.unit_price <= 0 ||
+          !['regular', 'lineman'].includes(item.sales_channel || 'regular') ||
           invalidToppings
         );
       });
@@ -146,8 +137,12 @@ export async function POST(request: NextRequest) {
         inventory_id: item.inventory_id,
         quantity_sold: item.quantity_sold,
         unit_price: item.unit_price,
-        total_revenue: item.quantity_sold * item.unit_price,
+        total_revenue: getNetRevenue(
+          item.quantity_sold * item.unit_price,
+          item.sales_channel || 'regular'
+        ),
         toppings: item.toppings || [],
+        sales_channel: item.sales_channel || 'regular',
         sale_date: saleDate,
         sale_time: saleTime,
       }));

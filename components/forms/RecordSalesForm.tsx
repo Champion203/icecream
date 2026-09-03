@@ -11,17 +11,19 @@ import { Toast } from 'primereact/toast';
 import type { Inventory, RecordSalesForm as IRecordSalesForm } from '@/schema/types';
 import { inventoryAPI, salesAPI } from '@/lib/api';
 import { formatCurrency, formatInventoryName } from '@/lib/utils';
-import { saleFormSchema, TOPPING_OPTIONS } from './RecordSaleForm';
+import { saleFormSchema } from './RecordSaleForm';
+import { getNetRevenue, getToppingOptions, type SalesChannel } from '@/lib/sales-pricing';
 
 const schema = z.object({
   items: z.array(saleFormSchema).min(1, 'ต้องมีรายการขายอย่างน้อย 1 รายการ'),
 });
 
-const emptyItem = () => ({
+const emptyItem = (salesChannel: SalesChannel = 'regular') => ({
   inventory_id: '',
   quantity_sold: 1,
   unit_price: Number.NaN,
   toppings: [],
+  sales_channel: salesChannel,
 });
 
 interface RecordSalesFormProps {
@@ -45,6 +47,7 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
   });
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
   const items = useWatch({ control, name: 'items' });
+  const [salesChannel, setSalesChannel] = useState<SalesChannel>('regular');
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -70,7 +73,10 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
   }, []);
 
   const total = (items || []).reduce(
-    (sum, item) => sum + (item?.quantity_sold || 0) * (item?.unit_price || 0),
+    (sum, item) => sum + getNetRevenue(
+      (item?.quantity_sold || 0) * (item?.unit_price || 0),
+      item?.sales_channel || salesChannel
+    ),
     0
   );
 
@@ -82,7 +88,7 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
         summary: 'สำเร็จ',
         detail: `บันทึกการขาย ${data.items.length} รายการเรียบร้อยแล้ว`,
       });
-      reset({ items: [emptyItem()] });
+      reset({ items: [emptyItem(salesChannel)] });
       onSuccess?.();
     } catch {
       toast.current?.show({
@@ -98,6 +104,44 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
       <Toast ref={toast} />
       {/* eslint-disable-next-line react-hooks/refs */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <label className="block mb-2 font-medium">ช่องทางการขาย</label>
+          <div className="flex gap-2">
+            {([
+              ['regular', 'เมนูปกติ'],
+              ['lineman', 'เมนู Line Man'],
+            ] as const).map(([value, label]) => (
+              <Button
+                key={value}
+                type="button"
+                label={label}
+                severity={salesChannel === value ? 'info' : 'secondary'}
+                outlined={salesChannel !== value}
+                onClick={() => {
+                  setSalesChannel(value);
+                  const options = getToppingOptions(value);
+                  items?.forEach((item, index) => {
+                    const toppings = options.filter((topping) =>
+                      item.toppings.some((selected) => selected.name === topping.name)
+                    );
+                    const previousTotal = item.toppings.reduce((sum, topping) => sum + topping.price, 0);
+                    const nextTotal = toppings.reduce((sum, topping) => sum + topping.price, 0);
+                    setValue(`items.${index}.toppings`, toppings, { shouldDirty: true });
+                    setValue(`items.${index}.unit_price`, Math.max(0, (item.unit_price || 0) - previousTotal + nextTotal), {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                    setValue(`items.${index}.sales_channel`, value, { shouldDirty: true });
+                  });
+                }}
+              />
+            ))}
+          </div>
+          {salesChannel === 'lineman' && (
+            <small className="block mt-2 text-orange-600">Line Man หักค่าธรรมเนียม 30% จากยอดรวม</small>
+          )}
+        </div>
+
         {fields.map((fieldItem, index) => {
           const itemErrors = errors.items?.[index];
           return (
@@ -221,7 +265,7 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
                     <MultiSelect
                       inputId={field.name}
                       value={field.value.map((topping) => topping.name)}
-                      options={TOPPING_OPTIONS.map((topping) => ({
+                      options={getToppingOptions(salesChannel).map((topping) => ({
                         label: `${topping.name} ${topping.price} บาท`,
                         value: topping.name,
                       }))}
@@ -230,7 +274,7 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
                           (sum, topping) => sum + topping.price,
                           0
                         );
-                        const selected = TOPPING_OPTIONS.filter((topping) =>
+                        const selected = getToppingOptions(salesChannel).filter((topping) =>
                           (event.value as string[]).includes(topping.name)
                         );
                         const nextTotal = selected.reduce(
@@ -266,11 +310,14 @@ export function RecordSalesForm({ onSuccess }: RecordSalesFormProps) {
           icon="pi pi-plus"
           severity="secondary"
           outlined
-          onClick={() => append(emptyItem())}
+          onClick={() => append(emptyItem(salesChannel))}
         />
 
         <div className="flex justify-between align-items-center border-top-1 border-gray-200 pt-3">
-          <span className="text-lg font-semibold">ยอดรวม {formatCurrency(total)}</span>
+          <span className="text-lg font-semibold">
+            ยอดรับสุทธิ {formatCurrency(total)}
+            {salesChannel === 'lineman' && <small className="block text-sm text-orange-600">หลังหักค่าธรรมเนียม 30%</small>}
+          </span>
           <Button
             type="submit"
             label={`บันทึก ${fields.length} รายการ`}

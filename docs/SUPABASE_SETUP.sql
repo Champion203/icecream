@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS sales (
   unit_price DECIMAL(10, 2) NOT NULL,
   total_revenue DECIMAL(10, 2) NOT NULL,
   toppings JSONB NOT NULL DEFAULT '[]'::jsonb,
+  sales_channel VARCHAR(20) NOT NULL DEFAULT 'regular'
+    CHECK (sales_channel IN ('regular', 'lineman')),
   sale_date DATE NOT NULL,
   sale_time TIME NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()

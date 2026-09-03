@@ -1,34 +1,25 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import type { RecordSaleForm, Sale } from '@/schema/types';
+import { getNetRevenue, getToppingOptions } from '@/lib/sales-pricing';
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-const TOPPING_PRICES: Record<string, number> = {
-  'เม็ดน้ำตาลเรนโบว์': 5,
-  เยลลี่แดง: 5,
-  'เวเฟอร์สติ๊กแท่ง': 5,
-  คอนแฟลก: 5,
-  ไมโล: 5,
-  โอรีโอ: 5,
-  โอวัลตินเฟลค: 5,
-  มาร์ชเมลโลว์: 5,
-  ช็อกชิพ: 10,
-  วิปครีม: 10,
-  บิสคอฟ: 15,
-};
 
 export async function PUT(request: Request, { params }: RouteContext) {
   try {
     const { id } = await params;
     const body: RecordSaleForm = await request.json();
+    const channel = body.sales_channel || 'regular';
     const invalidToppings = (body.toppings || []).some(
-      (topping) => TOPPING_PRICES[topping.name] !== topping.price
+      (topping) => !getToppingOptions(channel).some(
+        (option) => option.name === topping.name && option.price === topping.price
+      )
     );
     if (
       !body.inventory_id ||
       body.quantity_sold <= 0 ||
       body.unit_price <= 0 ||
+      !['regular', 'lineman'].includes(channel) ||
       invalidToppings
     ) {
       return NextResponse.json({ error: 'ข้อมูลรายการขายไม่ถูกต้อง' }, { status: 400 });
@@ -78,8 +69,9 @@ export async function PUT(request: Request, { params }: RouteContext) {
         inventory_id: body.inventory_id,
         quantity_sold: body.quantity_sold,
         unit_price: body.unit_price,
-        total_revenue: body.quantity_sold * body.unit_price,
+        total_revenue: getNetRevenue(body.quantity_sold * body.unit_price, channel),
         toppings: body.toppings || [],
+        sales_channel: channel,
       })
       .eq('id', id)
       .select('*, inventory(*)')

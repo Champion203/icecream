@@ -35,6 +35,7 @@ export interface Sale {
   unit_price: number;
   total_revenue: number;
   toppings: SaleTopping[];
+  sales_channel: SalesChannel;
   sale_date: string;
   sale_time: string;
   created_at: string;
@@ -87,6 +88,7 @@ export interface RecordSaleForm {
   quantity_sold: number;
   unit_price: number;
   toppings: SaleTopping[];
+  sales_channel: SalesChannel;
 }
 
 export interface RecordSalesForm {
@@ -97,3 +99,5 @@ export interface SaleTopping {
   name: string;
   price: number;
 }
+
+export type SalesChannel = 'regular' | 'lineman';

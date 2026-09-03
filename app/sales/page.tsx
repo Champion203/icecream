@@ -58,6 +58,8 @@ export default function SalesPage() {
     rowData.toppings?.length
       ? rowData.toppings.map((topping) => topping.name).join(', ')
       : '-';
+  const channelBodyTemplate = (rowData: Sale) =>
+    rowData.sales_channel === 'lineman' ? 'Line Man' : 'เมนูปกติ';
 
   const actionBodyTemplate = (rowData: Sale) => (
     <div className="flex gap-1">
@@ -177,6 +179,7 @@ export default function SalesPage() {
           tableStyle={{ minWidth: '50rem' }}
         >
           <Column header="ชื่อไอติม" body={nameBodyTemplate} />
+          <Column header="ช่องทาง" body={channelBodyTemplate} />
           <Column field="inventory.flavor" header="รสชาติ" />
           <Column header="ท็อปปิ้ง" body={toppingsBodyTemplate} />
           <Column field="quantity_sold" header="จำนวน" />

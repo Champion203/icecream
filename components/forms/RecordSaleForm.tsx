@@ -8,35 +8,20 @@ import { Dropdown } from 'primereact/dropdown';
 import { MultiSelect } from 'primereact/multiselect';
 import { Toast } from 'primereact/toast';
 import { useRef, useEffect, useState } from 'react';
-import type {
-  RecordSaleForm as IRecordSaleForm,
-  Inventory,
-  Sale,
-  SaleTopping,
-} from '@/schema/types';
+import type { RecordSaleForm as IRecordSaleForm, Inventory, Sale } from '@/schema/types';
 import { inventoryAPI, salesAPI } from '@/lib/api';
 import { formatInventoryName } from '@/lib/utils';
+import { getToppingOptions, type SalesChannel } from '@/lib/sales-pricing';
 
 export const saleFormSchema = z.object({
   inventory_id: z.string().min(1, 'เลือกไอติมจำเป็น'),
   quantity_sold: z.number().positive('จำนวนต้องมากกว่า 0'),
   unit_price: z.number().positive('ราคาต้องมากกว่า 0'),
   toppings: z.array(z.object({ name: z.string(), price: z.number().nonnegative() })),
+  sales_channel: z.enum(['regular', 'lineman']),
 });
 
-export const TOPPING_OPTIONS: SaleTopping[] = [
-  { name: 'เม็ดน้ำตาลเรนโบว์', price: 5 },
-  { name: 'เยลลี่แดง', price: 5 },
-  { name: 'เวเฟอร์สติ๊กแท่ง', price: 5 },
-  { name: 'คอนแฟลก', price: 5 },
-  { name: 'ไมโล', price: 5 },
-  { name: 'โอรีโอ', price: 5 },
-  { name: 'โอวัลตินเฟลค', price: 5 },
-  { name: 'มาร์ชเมลโลว์', price: 5 },
-  { name: 'ช็อกชิพ', price: 10 },
-  { name: 'วิปครีม', price: 10 },
-  { name: 'บิสคอฟ', price: 15 },
-];
+export const TOPPING_OPTIONS = getToppingOptions('regular');
 
 interface RecordSaleFormProps {
   onSuccess?: () => void;
@@ -47,6 +32,9 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
   const toast = useRef<Toast>(null);
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [salesChannel, setSalesChannel] = useState<SalesChannel>(
+    initialData?.sales_channel || 'regular'
+  );
 
   const {
     control,
@@ -62,6 +50,7 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
       quantity_sold: initialData?.quantity_sold,
       unit_price: initialData?.unit_price,
       toppings: initialData?.toppings || [],
+      sales_channel: initialData?.sales_channel || 'regular',
     },
   });
 
@@ -94,7 +83,11 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
       quantity_sold: initialData?.quantity_sold,
       unit_price: initialData?.unit_price,
       toppings: initialData?.toppings || [],
+      sales_channel: initialData?.sales_channel || 'regular',
     });
+    // Reset the local selector when the edit target changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSalesChannel(initialData?.sales_channel || 'regular');
   }, [initialData, reset]);
 
   const onSubmit = async (data: IRecordSaleForm) => {
@@ -126,6 +119,43 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
       {/* React Hook Form creates a stable submit handler; this is not a ref read. */}
       {/* eslint-disable-next-line react-hooks/refs */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <label className="block mb-2 font-medium">ช่องทางการขาย</label>
+          <div className="flex gap-2">
+            {([
+              ['regular', 'เมนูปกติ'],
+              ['lineman', 'เมนู Line Man'],
+            ] as const).map(([value, label]) => (
+              <Button
+                key={value}
+                type="button"
+                label={label}
+                severity={salesChannel === value ? 'info' : 'secondary'}
+                outlined={salesChannel !== value}
+                onClick={() => {
+                  setSalesChannel(value);
+                  setValue('sales_channel', value, { shouldDirty: true });
+                  const currentToppings = getValues('toppings');
+                  const options = getToppingOptions(value);
+                  const toppings = options.filter((topping) =>
+                    currentToppings.some((selected) => selected.name === topping.name)
+                  );
+                  const previousTotal = currentToppings.reduce((sum, topping) => sum + topping.price, 0);
+                  const nextTotal = toppings.reduce((sum, topping) => sum + topping.price, 0);
+                  setValue('toppings', toppings, { shouldDirty: true });
+                  setValue('unit_price', Math.max(0, (getValues('unit_price') || 0) - previousTotal + nextTotal), {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  });
+                }}
+              />
+            ))}
+          </div>
+          {salesChannel === 'lineman' && (
+            <small className="block mt-2 text-orange-600">Line Man หักค่าธรรมเนียม 30% จากยอดรวม</small>
+          )}
+        </div>
+
         <div>
           <label className="block mb-2 font-medium">เลือกไอติม</label>
           <Controller
@@ -194,7 +224,7 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
               <MultiSelect
                 inputId={field.name}
                 value={field.value.map((topping) => topping.name)}
-                options={TOPPING_OPTIONS.map((topping) => ({
+                options={getToppingOptions(salesChannel).map((topping) => ({
                   label: `${topping.name} ${topping.price} บาท`,
                   value: topping.name,
                 }))}
@@ -203,7 +233,7 @@ export function RecordSaleForm({ onSuccess, initialData }: RecordSaleFormProps) 
                     (sum, topping) => sum + topping.price,
                     0
                   );
-                  const selected = TOPPING_OPTIONS.filter((topping) =>
+                  const selected = getToppingOptions(salesChannel).filter((topping) =>
                     (event.value as string[]).includes(topping.name)
                   );
                   const nextTotal = selected.reduce(
